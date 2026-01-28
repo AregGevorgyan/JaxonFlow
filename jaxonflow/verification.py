@@ -48,7 +48,7 @@ class KernelVerifier:
             
             # If the kernel wrapper returns None (e.g. dummy mock), fail
             if actual_output is None:
-                 return VerificationResult(
+                return VerificationResult(
                     correct=False,
                     test_case_description="Kernel execution returned None (Mock dummy)"
                 )
@@ -131,7 +131,7 @@ class KernelVerifier:
             expected = np.array(expected)
 
         if actual.shape != expected.shape:
-             return False, 0.0, 0.0
+            return False, 0.0, 0.0
 
         # Tolerances
         atol = 1e-5

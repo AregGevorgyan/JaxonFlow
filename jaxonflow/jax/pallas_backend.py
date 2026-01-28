@@ -89,7 +89,7 @@ class PallasAgentBackend:
         def optimized_matmul(a, b):
             # precise semantics would depend on the generated kernel
             # This is a placeholder for the Pallas integration
-             return pl.pallas_call(
+            return pl.pallas_call(
                 lambda refs: None, # Placeholder kernel function
                 out_shape=jax.ShapeDtypeStruct((m, n), dtype),
                 grid=(m // block_m, n // block_n),

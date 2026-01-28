@@ -44,7 +44,7 @@ class AgentOpRegistry:
         # jaxonflow::agent_matmul(Tensor a, Tensor b) -> Tensor
         full_name = f"jaxonflow::{name}"
         if name in self.registered_ops:
-             return getattr(torch.ops.jaxonflow, name)
+            return getattr(torch.ops.jaxonflow, name)
 
         agent_lib.define(f"{name}(Tensor a, Tensor b) -> Tensor")
 
@@ -74,7 +74,7 @@ class AgentOpRegistry:
 
         @library.impl(agent_lib, name, "CPU")
         def agent_matmul_cpu(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
-             # Fallback to standard PyTorch implementation
+            # Fallback to standard PyTorch implementation
             return torch.mm(a, b)
 
         self.registered_ops[name] = True

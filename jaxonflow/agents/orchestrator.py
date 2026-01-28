@@ -157,7 +157,7 @@ class MultiAgentOrchestrator:
             # Phase 2: Code Generation
             coder = self.agents[AgentRole.CODER]
             if not isinstance(coder, CoderAgent):
-                 raise TypeError("Coder agent is not of type CoderAgent")
+                raise TypeError("Coder agent is not of type CoderAgent")
             
             code = coder.generate_kernel(spec, plan, history)
             
@@ -172,8 +172,8 @@ class MultiAgentOrchestrator:
                 # Use debugger to analyze the error
                 debugger = self.agents[AgentRole.DEBUGGER]
                 if not isinstance(debugger, DebuggerAgent):
-                     raise TypeError("Debugger agent is not of type DebuggerAgent")
-                
+                    raise TypeError("Debugger agent is not of type DebuggerAgent")
+
                 debug_feedback = debugger.analyze_error(
                     code, compile_result.error or "Unknown error", error_type="compilation"
                 )
@@ -196,7 +196,7 @@ class MultiAgentOrchestrator:
                 )
                 debugger = self.agents[AgentRole.DEBUGGER]
                 if not isinstance(debugger, DebuggerAgent):
-                     raise TypeError("Debugger agent is not of type DebuggerAgent")
+                    raise TypeError("Debugger agent is not of type DebuggerAgent")
 
                 debug_feedback = debugger.analyze_mismatch(
                     code,
@@ -283,11 +283,10 @@ class MultiAgentOrchestrator:
             # If no wrapper found, maybe the function itself is the kernel?
             # Triton kernels are decorated with @jit, so they are callables.
             if callable_fn is None:
-                 for name, obj in namespace.items():
+                for name, obj in namespace.items():
                     if callable(obj) and not name.startswith("_") and name != "triton":
-                        # Pick the first reasonable function
-                         callable_fn = obj
-                         break
+                        callable_fn = obj
+                        break
 
 
         except Exception as e:

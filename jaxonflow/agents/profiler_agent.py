@@ -28,14 +28,21 @@ class ProfilerAgent(LLMAgent):
         Returns:
             Performance feedback string.
         """
-        # Format profile data for prompt
-        # In a real implementation we would format this nicely
-        profile_summary = (
-            f"Speedup vs Reference: {profile.speedup_vs_reference:.2f}x\n"
-            f"Latency: {profile.latency_ms:.4f} ms\n"
-            f"Throughput: {profile.flops / 1e12:.2f} TFLOPS\n"
-            f"Memory Bandwidth: {profile.memory_bandwidth_gbps:.2f} GB/s\n"
-        )
+        # Format profile data for prompt using actual ProfileResult fields
+        latency_ms = profile.execution_time_us / 1000.0
+        parts = [
+            f"Speedup vs Reference: {profile.speedup_vs_reference:.2f}x",
+            f"Latency: {latency_ms:.4f} ms",
+        ]
+        if profile.memory_bandwidth_utilization is not None:
+            parts.append(f"Memory Bandwidth Utilization: {profile.memory_bandwidth_utilization:.1%}")
+        if profile.compute_utilization is not None:
+            parts.append(f"Compute Utilization: {profile.compute_utilization:.1%}")
+        if profile.achieved_occupancy is not None:
+            parts.append(f"Achieved Occupancy: {profile.achieved_occupancy:.1%}")
+        if profile.primary_bottleneck is not None:
+            parts.append(f"Primary Bottleneck: {profile.primary_bottleneck}")
+        profile_summary = "\n".join(parts)
         
         prompt = (
             f"Analyze the performance of the following Triton kernel:\n\n"
