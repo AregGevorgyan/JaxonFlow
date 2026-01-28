@@ -2,6 +2,7 @@
 
 > A comprehensive guide to replacing XLA/StableHLO and TorchInductor with LLM-powered agents for kernel generation
 This project is called JaxonFlow.
+Prefer UV for using Python.
 
 ## Table of Contents
 
