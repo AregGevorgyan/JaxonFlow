@@ -1,12 +1,22 @@
-"""Multi-agent system for kernel generation."""
+"""Agent implementations."""
 
-from .base import Agent, AgentRole
+from .base import Agent, AgentConfig, AgentRole, LLMAgent
+from .coder import CoderAgent
+from .debugger import DebuggerAgent
 from .orchestrator import MultiAgentOrchestrator
-from .prompts import get_system_prompt
+from .planner import PlannerAgent
+from .profiler_agent import ProfilerAgent
+from .verification import KernelVerifier
 
 __all__ = [
     "Agent",
+    "AgentConfig",
     "AgentRole",
+    "LLMAgent",
     "MultiAgentOrchestrator",
-    "get_system_prompt",
+    "PlannerAgent",
+    "CoderAgent",
+    "DebuggerAgent",
+    "ProfilerAgent",
+    "KernelVerifier",
 ]

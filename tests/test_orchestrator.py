@@ -110,6 +110,15 @@ class TestMultiAgentOrchestrator:
     def test_generate_kernel_with_ref(self, mock_orchestrator, matmul_spec_with_ref):
         """Test kernel generation with a reference implementation."""
         # Override mock to return matmul-compatible code
+        from jaxonflow.llm.client import LLMResponse
+        mock_orchestrator._llm_client.generate.return_value = LLMResponse(
+            content="```python\ndef wrapper(a, b):\n    return a @ b\n```",
+            input_tokens=100,
+            output_tokens=50,
+            model="test",
+            latency_ms=100,
+        )
+        # Also ensure extract_code returns the same (since we're mocking it)
         mock_orchestrator._llm_client.extract_code.return_value = (
             "def wrapper(a, b):\n    return a @ b\n"
         )

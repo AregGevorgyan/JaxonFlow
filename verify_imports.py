@@ -25,6 +25,14 @@ modules = [
     "jaxonflow.pytorch.custom_ops",
     "jaxonflow.pytorch.triton_wrapper",
     "jaxonflow.pytorch.inductor_extension",
+    # New agents
+    "jaxonflow.agents.base",
+    "jaxonflow.agents.planner",
+    "jaxonflow.agents.coder",
+    "jaxonflow.agents.debugger",
+    "jaxonflow.agents.profiler_agent",
+    "jaxonflow.agents.orchestrator",
+    "jaxonflow.agents",
 ]
 
 success = True

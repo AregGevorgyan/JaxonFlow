@@ -10,55 +10,15 @@ from ..config import AgentBackendConfig
 from ..exceptions import KernelGenerationError
 from ..llm.client import LLMClient, LLMResponse, TokenUsage, create_client
 from ..spec import CompiledKernel, CompilationResult, KernelSpec, ProfileResult, VerificationResult
-from .base import Agent, AgentConfig, AgentRole
+from .base import Agent, AgentConfig, AgentRole, LLMAgent
+from .coder import CoderAgent
+from .debugger import DebuggerAgent
+from .planner import PlannerAgent
+from .profiler_agent import ProfilerAgent
 from .prompts import get_system_prompt
 from .verification import KernelVerifier
 
 logger = logging.getLogger(__name__)
-
-
-class LLMAgent(Agent):
-    """An agent that uses an LLM client to generate responses.
-
-    Each agent has a specialized role with its own system prompt,
-    temperature setting, and token limit.
-    """
-
-    def __init__(self, config: AgentConfig, llm_client: LLMClient) -> None:
-        """Initialize an LLM-based agent.
-
-        Args:
-            config: Agent configuration with role, temperature, etc.
-            llm_client: The LLM client to use for generation.
-        """
-        super().__init__(config)
-        self.llm_client = llm_client
-
-    def run(self, *args: Any, **kwargs: Any) -> LLMResponse:
-        """Run the agent with a formatted prompt.
-
-        Expects the first positional argument to be the user prompt string.
-
-        Args:
-            *args: First arg should be the prompt string.
-            **kwargs: Optional overrides for temperature, max_tokens.
-
-        Returns:
-            LLMResponse from the LLM client.
-        """
-        if not args:
-            raise ValueError("LLMAgent.run() requires at least a prompt argument")
-
-        prompt = str(args[0])
-        temperature = kwargs.get("temperature", self.config.temperature)
-        max_tokens = kwargs.get("max_tokens", self.config.max_tokens)
-
-        return self.llm_client.generate(
-            prompt=prompt,
-            system_prompt=self.config.system_prompt,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
 
 
 class MultiAgentOrchestrator:
@@ -104,44 +64,46 @@ class MultiAgentOrchestrator:
         agent_config = self.config.agent
         client = self.llm_client
 
+        # Helper to create config
+        def make_config(role: AgentRole, temp: float, tokens: int) -> AgentConfig:
+            return AgentConfig(
+                role=role,
+                model=self.config.llm.model,
+                temperature=temp,
+                max_tokens=tokens,
+                system_prompt=get_system_prompt(role),
+            )
+
         agent_map: dict[AgentRole, Agent] = {
-            AgentRole.PLANNER: LLMAgent(
-                AgentConfig(
-                    role=AgentRole.PLANNER,
-                    model=self.config.llm.model,
-                    temperature=agent_config.planner_temperature,
-                    max_tokens=agent_config.planner_max_tokens,
-                    system_prompt=get_system_prompt(AgentRole.PLANNER),
+            AgentRole.PLANNER: PlannerAgent(
+                make_config(
+                    AgentRole.PLANNER, 
+                    agent_config.planner_temperature, 
+                    agent_config.planner_max_tokens
                 ),
                 llm_client=client,
             ),
-            AgentRole.CODER: LLMAgent(
-                AgentConfig(
-                    role=AgentRole.CODER,
-                    model=self.config.llm.model,
-                    temperature=agent_config.coder_temperature,
-                    max_tokens=agent_config.coder_max_tokens,
-                    system_prompt=get_system_prompt(AgentRole.CODER),
+            AgentRole.CODER: CoderAgent(
+                make_config(
+                    AgentRole.CODER, 
+                    agent_config.coder_temperature, 
+                    agent_config.coder_max_tokens
                 ),
                 llm_client=client,
             ),
-            AgentRole.DEBUGGER: LLMAgent(
-                AgentConfig(
-                    role=AgentRole.DEBUGGER,
-                    model=self.config.llm.model,
-                    temperature=agent_config.debugger_temperature,
-                    max_tokens=agent_config.debugger_max_tokens,
-                    system_prompt=get_system_prompt(AgentRole.DEBUGGER),
+            AgentRole.DEBUGGER: DebuggerAgent(
+                make_config(
+                    AgentRole.DEBUGGER, 
+                    agent_config.debugger_temperature, 
+                    agent_config.debugger_max_tokens
                 ),
                 llm_client=client,
             ),
-            AgentRole.PROFILER: LLMAgent(
-                AgentConfig(
-                    role=AgentRole.PROFILER,
-                    model=self.config.llm.model,
-                    temperature=agent_config.profiler_temperature,
-                    max_tokens=agent_config.profiler_max_tokens,
-                    system_prompt=get_system_prompt(AgentRole.PROFILER),
+            AgentRole.PROFILER: ProfilerAgent(
+                make_config(
+                    AgentRole.PROFILER, 
+                    agent_config.profiler_temperature, 
+                    agent_config.profiler_max_tokens
                 ),
                 llm_client=client,
             ),
@@ -171,7 +133,11 @@ class MultiAgentOrchestrator:
         logger.info(f"Starting kernel generation for {spec.operation}")
 
         # Phase 1: Planning
-        plan = self._run_planner(spec)
+        planner = self.agents[AgentRole.PLANNER]
+        if not isinstance(planner, PlannerAgent):
+            raise TypeError("Planner agent is not of type PlannerAgent")
+            
+        plan = planner.create_plan(spec)
         logger.debug(f"Plan created for {spec.operation}")
 
         best_kernel: CompiledKernel | None = None
@@ -189,8 +155,13 @@ class MultiAgentOrchestrator:
             )
 
             # Phase 2: Code Generation
-            code = self._run_coder(spec, plan, history)
-            if code is None:
+            coder = self.agents[AgentRole.CODER]
+            if not isinstance(coder, CoderAgent):
+                 raise TypeError("Coder agent is not of type CoderAgent")
+            
+            code = coder.generate_kernel(spec, plan, history)
+            
+            if not code or not code.strip():
                 logger.warning("Coder returned no code")
                 continue
 
@@ -199,7 +170,11 @@ class MultiAgentOrchestrator:
             if not compile_result.success:
                 logger.warning(f"Compilation failed: {compile_result.error}")
                 # Use debugger to analyze the error
-                debug_feedback = self._run_debugger(
+                debugger = self.agents[AgentRole.DEBUGGER]
+                if not isinstance(debugger, DebuggerAgent):
+                     raise TypeError("Debugger agent is not of type DebuggerAgent")
+                
+                debug_feedback = debugger.analyze_error(
                     code, compile_result.error or "Unknown error", error_type="compilation"
                 )
                 history.append({
@@ -219,11 +194,14 @@ class MultiAgentOrchestrator:
                 logger.warning(
                     f"Verification failed: {verify_result.test_case_description}"
                 )
-                debug_feedback = self._run_debugger(
+                debugger = self.agents[AgentRole.DEBUGGER]
+                if not isinstance(debugger, DebuggerAgent):
+                     raise TypeError("Debugger agent is not of type DebuggerAgent")
+
+                debug_feedback = debugger.analyze_mismatch(
                     code,
-                    f"Verification failed: {verify_result.test_case_description}, "
-                    f"max_abs_error={verify_result.max_abs_error}",
-                    error_type="correctness",
+                    verify_result.expected,
+                    verify_result.actual
                 )
                 history.append({
                     "iteration": iteration,
@@ -233,19 +211,26 @@ class MultiAgentOrchestrator:
                 })
                 continue
 
-            # Kernel is correct - record it
+            # Kernel is correct 
             compile_result.kernel.iterations_to_generate = iteration + 1
             compile_result.kernel.generation_time_s = time.monotonic() - start_time
-
+            
+            # Phase 5: Profiling (Optional / Future)
+            # Since we typically run on CPU or without GPU in dev, we might skip this.
+            # But let's verify if we should profile.
+            
+            # If we were to profile:
+            # profile_result = self._profile_kernel(compile_result.kernel, spec)
+            # if profile_result.speedup_vs_reference > best_speedup: ...
+            
             # For now, accept the first correct kernel.
-            # In a GPU environment, we'd profile and potentially iterate.
             logger.info(
                 f"Generated correct kernel for {spec.operation} "
                 f"in {iteration + 1} iteration(s)"
             )
             return compile_result.kernel
 
-        # Return best kernel found (if any), even if we didn't hit target speedup
+        # Return best kernel found (if any)
         if best_kernel is not None:
             return best_kernel
 
@@ -254,100 +239,6 @@ class MultiAgentOrchestrator:
             f"after {self.config.agent.max_iterations} iterations"
         )
         return None
-
-    def _run_planner(self, spec: KernelSpec) -> str:
-        """Run the planner agent to create an optimization strategy.
-
-        Args:
-            spec: The kernel specification.
-
-        Returns:
-            The plan as a string (typically YAML formatted).
-        """
-        prompt = (
-            f"Create an optimization plan for the following kernel:\n\n"
-            f"{spec.to_prompt()}\n\n"
-            f"Consider the hardware constraints and suggest tile sizes, "
-            f"grid configuration, and memory access patterns."
-        )
-
-        planner = self.agents[AgentRole.PLANNER]
-        response = planner.run(prompt)
-        return response.content if isinstance(response, LLMResponse) else str(response)
-
-    def _run_coder(
-        self, spec: KernelSpec, plan: str, history: list[dict[str, Any]]
-    ) -> str | None:
-        """Run the coder agent to generate Triton kernel code.
-
-        Args:
-            spec: The kernel specification.
-            plan: The optimization plan from the planner.
-            history: Previous iteration history for context.
-
-        Returns:
-            Generated Triton code string, or None if extraction failed.
-        """
-        prompt_parts = [
-            f"Generate a Triton kernel for the following specification:\n\n",
-            f"{spec.to_prompt()}\n\n",
-            f"Optimization Plan:\n{plan}\n\n",
-        ]
-
-        if history:
-            prompt_parts.append("Previous Attempts:\n")
-            for entry in history[-3:]:  # Last 3 attempts for context
-                prompt_parts.append(
-                    f"- Iteration {entry['iteration']}: {entry['phase']}\n"
-                    f"  Error: {entry.get('error', 'N/A')}\n"
-                    f"  Feedback: {entry.get('debug_feedback', 'N/A')}\n"
-                )
-            prompt_parts.append(
-                "\nPlease fix the issues from previous attempts.\n"
-            )
-
-        prompt_parts.append(
-            "Generate the complete, executable Triton kernel code. "
-            "Include a wrapper function that handles grid computation and kernel launch."
-        )
-
-        prompt = "".join(prompt_parts)
-        coder = self.agents[AgentRole.CODER]
-        response = coder.run(prompt)
-
-        # Extract code from response
-        if isinstance(response, LLMResponse):
-            code = self.llm_client.extract_code(response, language="python")
-            if code is None:
-                # Try extracting from raw content (maybe no code fence)
-                code = response.content
-            return code
-
-        return str(response) if response else None
-
-    def _run_debugger(
-        self, code: str, error: str, error_type: str = "compilation"
-    ) -> str:
-        """Run the debugger agent to analyze errors.
-
-        Args:
-            code: The kernel code that failed.
-            error: The error message.
-            error_type: Type of error ("compilation" or "correctness").
-
-        Returns:
-            Debug feedback as a string.
-        """
-        prompt = (
-            f"Analyze the following {error_type} error in a Triton kernel:\n\n"
-            f"Code:\n```python\n{code}\n```\n\n"
-            f"Error:\n{error}\n\n"
-            f"Provide specific fixes in YAML format."
-        )
-
-        debugger = self.agents[AgentRole.DEBUGGER]
-        response = debugger.run(prompt)
-        return response.content if isinstance(response, LLMResponse) else str(response)
 
     def _compile_kernel(self, code: str, spec: KernelSpec) -> CompilationResult:
         """Compile the generated kernel code.
@@ -388,6 +279,16 @@ class MultiAgentOrchestrator:
                     if "wrapper" in name.lower() or "launch" in name.lower():
                         callable_fn = obj
                         break
+            
+            # If no wrapper found, maybe the function itself is the kernel?
+            # Triton kernels are decorated with @jit, so they are callables.
+            if callable_fn is None:
+                 for name, obj in namespace.items():
+                    if callable(obj) and not name.startswith("_") and name != "triton":
+                        # Pick the first reasonable function
+                         callable_fn = obj
+                         break
+
 
         except Exception as e:
             # Code has imports that aren't available (like triton) - that's OK
