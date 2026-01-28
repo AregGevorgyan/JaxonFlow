@@ -6,7 +6,7 @@ import os
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Literal
+from typing import ClassVar, Literal
 
 from .exceptions import ConfigurationError
 
@@ -16,6 +16,9 @@ class LLMProvider(str, Enum):
 
     ANTHROPIC = "anthropic"
     OPENAI = "openai"
+    GEMINI = "gemini"
+    OPENROUTER = "openrouter"
+    LOCAL = "local"
 
 
 @dataclass
@@ -29,18 +32,24 @@ class LLMConfig:
     timeout: float = 120.0
     max_retries: int = 3
 
+    _ENV_VARS: ClassVar[dict[str, str]] = {
+        "anthropic": "ANTHROPIC_API_KEY",
+        "openai": "OPENAI_API_KEY",
+        "gemini": "GEMINI_API_KEY",
+        "openrouter": "OPENROUTER_API_KEY",
+    }
+
     def __post_init__(self) -> None:
         # Load API key from environment if not provided
         if self.api_key is None:
-            if self.provider == LLMProvider.ANTHROPIC:
-                self.api_key = os.environ.get("ANTHROPIC_API_KEY")
-            elif self.provider == LLMProvider.OPENAI:
-                self.api_key = os.environ.get("OPENAI_API_KEY")
+            env_var = self._ENV_VARS.get(self.provider.value)
+            if env_var:
+                self.api_key = os.environ.get(env_var)
 
     def validate(self) -> None:
         """Validate the configuration."""
         if self.api_key is None:
-            env_var = "ANTHROPIC_API_KEY" if self.provider == LLMProvider.ANTHROPIC else "OPENAI_API_KEY"
+            env_var = self._ENV_VARS.get(self.provider.value, "API_KEY")
             raise ConfigurationError(
                 f"API key not provided and {env_var} environment variable not set"
             )

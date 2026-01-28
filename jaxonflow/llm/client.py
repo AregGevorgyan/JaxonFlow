@@ -208,11 +208,23 @@ def create_client(config: LLMConfig) -> LLMClient:
         ValueError: If provider is not supported.
     """
     from ..config import LLMProvider
-    from .providers import AnthropicProvider, OpenAIProvider
+    from .providers import (
+        AnthropicProvider,
+        GeminiProvider,
+        LocalProvider,
+        OpenAIProvider,
+        OpenRouterProvider,
+    )
 
-    if config.provider == LLMProvider.ANTHROPIC:
-        return AnthropicProvider(config)
-    elif config.provider == LLMProvider.OPENAI:
-        return OpenAIProvider(config)
-    else:
+    providers = {
+        LLMProvider.ANTHROPIC: AnthropicProvider,
+        LLMProvider.OPENAI: OpenAIProvider,
+        LLMProvider.GEMINI: GeminiProvider,
+        LLMProvider.OPENROUTER: OpenRouterProvider,
+        LLMProvider.LOCAL: LocalProvider,
+    }
+
+    provider_cls = providers.get(config.provider)
+    if provider_cls is None:
         raise ValueError(f"Unsupported LLM provider: {config.provider}")
+    return provider_cls(config)
