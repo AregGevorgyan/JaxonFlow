@@ -210,10 +210,12 @@ def create_client(config: LLMConfig) -> LLMClient:
     from ..config import LLMProvider
     from .providers import (
         AnthropicProvider,
+        BedrockProvider,
         GeminiProvider,
         LocalProvider,
         OpenAIProvider,
         OpenRouterProvider,
+        VertexAIProvider,
     )
 
     providers = {
@@ -222,6 +224,8 @@ def create_client(config: LLMConfig) -> LLMClient:
         LLMProvider.GEMINI: GeminiProvider,
         LLMProvider.OPENROUTER: OpenRouterProvider,
         LLMProvider.LOCAL: LocalProvider,
+        LLMProvider.VERTEX_AI: VertexAIProvider,
+        LLMProvider.BEDROCK: BedrockProvider,
     }
 
     provider_cls = providers.get(config.provider)

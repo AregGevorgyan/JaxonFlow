@@ -49,8 +49,12 @@ gemini = ["google-genai>=1.0.0"]
 # OpenRouter and Local use the openai SDK
 openrouter = ["openai>=1.50.0"]
 local = ["openai>=1.50.0"]
+# Google Vertex AI (enterprise GCP access to Gemini models)
+vertex-ai = ["google-cloud-aiplatform>=1.60.0"]
+# AWS Bedrock (Claude, Llama, Mistral, etc. via AWS)
+bedrock = ["boto3>=1.28.0"]
 # All LLM providers
-llm = ["jaxonflow[anthropic,openai,gemini]"]
+llm = ["jaxonflow[anthropic,openai,gemini,vertex-ai,bedrock]"]
 jax = [
     "jax[cuda12]>=0.4.0",
 ]

@@ -68,7 +68,7 @@ class TestLLMConfig:
         assert config.provider == LLMProvider.LOCAL
 
     def test_all_providers_exist(self):
-        assert len(LLMProvider) == 5
+        assert len(LLMProvider) == 7
 
 
 class TestCacheConfig:

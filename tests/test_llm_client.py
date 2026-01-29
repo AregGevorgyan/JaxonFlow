@@ -179,3 +179,21 @@ class TestCreateClient:
         assert isinstance(client, LocalProvider)
         assert client.usage.input_price_per_mtok == 0.0
         assert client.usage.output_price_per_mtok == 0.0
+
+    def test_create_vertex_ai_client(self):
+        config = LLMConfig(provider=LLMProvider.VERTEX_AI,
+                           model="gemini-2.0-flash")
+        client = create_client(config)
+        from jaxonflow.llm.providers.vertex_ai import VertexAIProvider
+        assert isinstance(client, VertexAIProvider)
+        assert client.usage.input_price_per_mtok == 1.25
+        assert client.usage.output_price_per_mtok == 5.0
+
+    def test_create_bedrock_client(self):
+        config = LLMConfig(provider=LLMProvider.BEDROCK,
+                           model="anthropic.claude-3-5-sonnet-20241022-v2:0")
+        client = create_client(config)
+        from jaxonflow.llm.providers.bedrock import BedrockProvider
+        assert isinstance(client, BedrockProvider)
+        assert client.usage.input_price_per_mtok == 3.0
+        assert client.usage.output_price_per_mtok == 15.0

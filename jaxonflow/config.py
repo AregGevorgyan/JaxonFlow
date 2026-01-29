@@ -19,6 +19,8 @@ class LLMProvider(str, Enum):
     GEMINI = "gemini"
     OPENROUTER = "openrouter"
     LOCAL = "local"
+    VERTEX_AI = "vertex_ai"
+    BEDROCK = "bedrock"
 
 
 @dataclass
@@ -48,6 +50,9 @@ class LLMConfig:
 
     def validate(self) -> None:
         """Validate the configuration."""
+        # Vertex AI and Bedrock use their own credential chains, not API keys
+        if self.provider.value in ("vertex_ai", "bedrock"):
+            return
         if self.api_key is None:
             env_var = self._ENV_VARS.get(self.provider.value, "API_KEY")
             raise ConfigurationError(
