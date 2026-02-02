@@ -77,18 +77,18 @@ class CoderAgent(LLMAgent):
                 pass
         
         if "```" in text:
-             try:
+            try:
                 start = text.index("```") + 3
                 end = text.index("```", start)
                 # handle if language was specified but not python (e.g. ```triton)
                 first_line_end = text.find('\n', start)
                 if first_line_end != -1 and first_line_end < end:
-                     # Check if the first line is just a language identifier
-                     lang_line = text[start:first_line_end].strip()
-                     if ' ' not in lang_line:
-                          start = first_line_end + 1
+                    # Check if the first line is just a language identifier
+                    lang_line = text[start:first_line_end].strip()
+                    if ' ' not in lang_line:
+                        start = first_line_end + 1
                 return text[start:end].strip()
-             except ValueError:
+            except ValueError:
                 pass
 
         return text
