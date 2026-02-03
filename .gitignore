@@ -1,4 +1,3 @@
-# .gitignore for JaxonFlow
 __pycache__/
 *.py[cod]
 *$py.class
@@ -35,3 +34,4 @@ env/
 .DS_Store
 .env
 kernels.db
+temp/
