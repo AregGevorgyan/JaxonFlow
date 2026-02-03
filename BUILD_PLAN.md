@@ -2,7 +2,7 @@
 
 ## Phase 1: Core Infrastructure (COMPLETE)
 
-Everything below is built and tested (140 tests, all passing).
+Everything below is built and tested.
 
 - **Configuration** (`config.py`) - `AgentBackendConfig`, `LLMConfig`, `CacheConfig`, `AgentConfig`, env var loading
 - **Hardware** (`hardware.py`) - GPU profiles (A100, H100, V100, RTX4090), auto-detection, prompt formatting
@@ -75,13 +75,17 @@ Dedicated agent implementations with specialized logic beyond basic LLM promptin
 
 ---
 
-## Phase 6: Benchmarking (requires GPU)
+## Phase 6: Benchmarking (COMPLETE)
+
+Built and tested (264 tests total, all passing). Supports mock mode on CPU; real GPU profiling when hardware is available.
 
 | Component | File | What |
 |-----------|------|------|
-| Benchmark Harness | `benchmarks/runner.py` | Run against KernelBench, TritonBench |
-| Perf Tests | `benchmarks/perf_tests.py` | Speedup measurement vs XLA/Inductor baselines |
-| Regression Tracking | `benchmarks/regression.py` | Track performance across commits |
+| Benchmark Harness | `benchmarks/runner.py` | `BenchmarkRunner`, `BenchmarkSuite`, `BenchmarkTask`, `BenchmarkResult`, `TaskResult`. Built-in suites: matmul_sweep, elementwise_sweep, reduction_sweep, full. |
+| Perf Tests | `benchmarks/perf_tests.py` | `PerfTester` with NumPy/XLA/Inductor baselines, median timing, per-op comparison helpers. |
+| Regression Tracking | `benchmarks/regression.py` | `RegressionTracker` with git-aware recording, commit comparison, regression detection, history tracking, Markdown report generation. |
+| Package Init | `benchmarks/__init__.py` | Re-exports all public classes. |
+| Tests | `tests/test_benchmarks.py` | 40 tests covering runner, suites, perf, regression, serialization. |
 
 ---
 
@@ -96,6 +100,14 @@ jaxonflow/
 ├── spec.py
 ├── cache.py
 ├── dispatch.py
+├── compiler.py
+├── verification.py
+├── profiler.py
+├── feedback.py
+├── async_backend.py
+├── warmup.py
+├── cost.py
+├── telemetry.py
 ├── llm/
 │   ├── __init__.py
 │   ├── client.py
@@ -104,18 +116,42 @@ jaxonflow/
 │       ├── anthropic.py
 │       ├── openai.py
 │       ├── gemini.py
+│       ├── vertex_ai.py
+│       ├── bedrock.py
 │       ├── openrouter.py
 │       └── local.py
-└── agents/
+├── agents/
+│   ├── __init__.py
+│   ├── base.py
+│   ├── orchestrator.py
+│   ├── planner.py
+│   ├── coder.py
+│   ├── debugger.py
+│   ├── profiler_agent.py
+│   ├── verification.py
+│   └── prompts.py
+├── jax/
+│   ├── __init__.py
+│   ├── dispatch.py
+│   ├── lowering.py
+│   └── pallas_backend.py
+└── pytorch/
     ├── __init__.py
-    ├── base.py
-    ├── orchestrator.py
-    ├── prompts.py
-    └── verification.py
+    ├── compiler_backend.py
+    ├── custom_ops.py
+    ├── inductor_extension.py
+    └── triton_wrapper.py
+
+benchmarks/
+├── __init__.py
+├── runner.py
+├── perf_tests.py
+└── regression.py
 
 tests/
 ├── conftest.py
 ├── test_agents.py
+├── test_benchmarks.py
 ├── test_cache.py
 ├── test_config.py
 ├── test_dispatch.py
@@ -123,7 +159,12 @@ tests/
 ├── test_integration.py
 ├── test_llm_client.py
 ├── test_orchestrator.py
-└── test_spec.py
+├── test_spec.py
+├── test_phase2_framework.py
+├── test_phase3_compiler.py
+├── test_phase3_mock.py
+├── test_phase4_agents.py
+└── test_phase5.py
 ```
 
 ## Supported LLM Providers

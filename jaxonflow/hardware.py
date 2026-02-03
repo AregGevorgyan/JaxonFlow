@@ -144,6 +144,8 @@ class HardwareContext:
             return cls.from_name("V100-32GB")
         elif "4090" in device_name:
             return cls.from_name("RTX4090")
+        elif "3090" in device_name:
+            return cls.from_name("RTX3090")
 
         # Build from PyTorch properties for unknown GPUs
         cc_major, cc_minor = props.major, props.minor
@@ -200,6 +202,8 @@ class HardwareContext:
             return cls.from_name("V100-32GB")
         elif "4090" in name:
             return cls.from_name("RTX4090")
+        elif "3090" in name:
+            return cls.from_name("RTX3090")
 
         # Default to A100 for unknown
         logger.warning(f"Unknown GPU '{name}', using A100-80GB profile")
@@ -392,5 +396,24 @@ def _get_hardware_profiles() -> dict[str, HardwareContext]:
             fp32_tflops=82.6,
             fp16_tflops=330,
             tf32_tflops=165,
+        ),
+        "RTX3090": HardwareContext(
+            name="NVIDIA RTX 3090",
+            compute_capability=(8, 6),
+            vendor="nvidia",
+            sm_count=82,
+            cores_per_sm=128,
+            warp_size=32,
+            max_threads_per_block=1024,
+            max_blocks_per_sm=16,
+            global_memory_bytes=24 * 1024**3,
+            shared_memory_per_block=102400,
+            shared_memory_per_sm=102400,
+            l2_cache_size=6 * 1024 * 1024,
+            registers_per_block=65536,
+            memory_bandwidth_gbps=936,
+            fp32_tflops=35.6,
+            fp16_tflops=71,
+            tf32_tflops=35.6,
         ),
     }
